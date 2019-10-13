@@ -719,7 +719,7 @@
 	(SETQ BODY (PARSE 1.))
 	(RETURN
 	 (COND ((AND (EQUAL FCN 'MAPC)
-		     (APPLY #'AND
+		     (APPLY #'ANDF
 			    (MAPCAR #'(LAMBDA (X)
 					(and (not (atom x)) (EQUAL (CAR X) 'TO)))
 				    ARGTS)))
