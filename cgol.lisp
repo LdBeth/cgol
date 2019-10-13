@@ -36,6 +36,7 @@
 ;; how 'bout a macro for (defun funname...) followed by (setf (get 'fn-name 'nud) #'fn-name)
 ;; if use special setf then could I have multiple pairs for single setf?
 
+(in-package #:cgol)
 
 ;;;
 ;;; syntax

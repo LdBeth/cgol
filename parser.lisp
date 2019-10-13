@@ -6,6 +6,8 @@
 ;;; University of California at Berkeley
 ;;;
 
+(in-package #:cgol)
+
 ;;; gosh, this file is MUCH smaller than before
 
 (defvar token nil)
