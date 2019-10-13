@@ -1,0 +1,719 @@
+%From phelps@palm.CS.Berkeley.EDU Fri Dec 18 15:15:01 1992
+%From: phelps@palm.CS.Berkeley.EDU (Tom Phelps)
+% Document Type: LaTeX
+% Master File: cgol.tex
+\documentstyle{article}
+% \input epsf
+\newcommand{\code}[1]{{\tt #1}}
+%\newcommand{\codev}[1]{{\nintt \begin{verbatim}#1\end{verbatim}}}
+\newcommand{\coderef}[1]{\addcontentsline{toc}{subsubsection}{\code{#1}}}
+\newcommand{\cgol}{CGOL}	% maybe something fancier later
+\newcommand{\ml}{Maclisp}
+\newcommand{\cl}{Common Lisp}
+
+\begin{document}
+
+\title{A \cl\ \cgol}
+\author{Tom Phelps}
+%edited by R. Fateman
+%Computer Science 283 Term Project
+\date{December 16, 1992}
+
+\maketitle
+
+\begin{abstract}
+
+\cgol\ is an Algol-like notation for Lisp. The original
+version, written by Vaughan Pratt at M.I.T. in the early 70s was
+written in \ml. This new version is based on \cl. 
+\cgol\ was translated to \cl\ in the
+following four-stage process:
+
+(1) \code{cgol.tok}, the tokenizer has been almost completely rewritten;
+(2) \code{cgoll.l}, the main translation loop with library of translation
+schemas has been converted from \ml\ to \cl; (3) the code that \code{cgoll.l}
+{\it produces} has been converted to \cl; (4) selected examples of \cgol\
+programs themselves were rewritten, since
+certain aspects of the semantics of \ml would otherwise not
+be modelled in the expected fashion.  \ml\ differs from \cl\ in a
+variety of respects, and some of them are apparent from \cgol\  including
+direct escapes to Lisp, variable scoping,  function definitions and 
+numerous other aspects.
+
+In contrast to the {\it programming} described above, the major
+contribution of this {\it paper} is annotation of selected code from the
+\cgol\ translator.
+\end{abstract}
+
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section {Introduction}
+
+\cgol\ is a notation for writing Lisp in Algol-like notation.  This paper
+describes the \cl\ translation of this system in great detail and gives a
+brief users guide in its use.  Most (but not all) of the original \cgol\
+language remains valid; before trying to use the \cl\ version, one should
+read the original manual (\code{cgol.man}).  The paper ``Top Down
+Operator Precedence'' \cite{pratt:top} describes the theory behind (much
+of\footnote{Parsing of complex forms is done on an ad hoc basis.}) of the
+parsing.
+
+%include (PostScript version of) diagram from cgol.man\cite{pratt:man}
+% binding power details, diagram in annotated code
+%translation four parts\ldots % copy rest from abstract
+%\section {Coolness}
+%text + data
+
+\section {Limitations of \cgol}
+
+As described in \cite {pratt:top} and explained in great detail in the
+annotated code, \cgol\ uses a easy-to-implement method of
+parsing.  In contrast to LALR parsers which use complex theory and analysis
+to produce a efficient, table-based parser, the heart of \cgol's parsing
+technology can be written in a handful of lines.
+
+\coderef{parse} {\footnotesize\begin{verbatim}
+(defun parse (rbp) 
+  (do ((translation (funcall (nud)) (funcall (led) translation))) 
+      ((not (< rbp (or (getden lbpl) 0))) translation) 
+   nil))
+\end{verbatim}}
+
+Just as in Lisp, attached to every functional symbol is a property holding its
+implementation.  Except for the first token in an expression, which is
+called without it, \code{parse} calls the functional translation of the
+current operator along with the left-hand side of the expression built up
+thus far.  For instance, when the parser reaches the plus sign in {\tt
+a*b*c+4} it has accumulated the running translation of {\tt a*b*c} and
+passes this to {\tt +}, which parses its right-hand sign to obtain its
+right-hand operator.\footnote{More details are given with the annotated
+code.}
+
+The obvious questions is, If \cgol\ is so simple and yet powerful enough to
+(correctly) parse complicated expressions with the correct operator
+precedence, why isn't \cgol\ used more widely?
+
+
+
+\subsection {Full Correspondence}
+
+After all, \cgol\ is simply another {\it notation} for Lisp.  In fact, the
+\cgol\ manual defines the meaning of \cgol\ expressions in terms of their
+Lisp translations!  \cgol's value is that its notation is, to some, more
+aesthetically pleasing than Lisp's---with all those unsightly parentheses!
+The problem is that, except for simple cases, to use \cgol\ one must more
+or less know the meaning of the Lisp translation, which begs the question,
+Why not dial direct?  Say, for instance, there is a complex Lisp operator
+to which \cgol\ provides a more aesthetically pleasing interface---arrays,
+for instance.
+
+{\footnotesize\begin{verbatim}
+    make-array dims [:adjustable adj] [:element-type et] [:fill-pointer fp]
+      {[:initial-element ie] | [:initial-contents ic] | [:displaced-to dt
+      [:displaced-index-offset dio]]}
+\end{verbatim}}
+
+To use the \cgol\ notation I must first figure out how I wish to utilize
+this function (as I have forgotten one of the seven optional parameters) so
+I look up this function in Lisp (which is how \cgol\ defines its notation).
+Once having determined the Lisp form I need, I must translate this into
+\cgol.  Why not cut out the middle man?  To be sure, it would ease the life
+of the \cgol\ implementor as optional parameters are handled in an ad hoc
+way, with special-purpose code included with every function.
+
+%To really have to know Lisp
+%translation, like "natural language" interface to data bases.  state
+%emphatically "the notation should restrict itself to being a notation for
+%LISP abstract objects"
+
+%if make arrays, can do stuff that most high-level languages can, but if
+%want to take advantage of
+
+A more egregious example of a Lisp function to which \cgol\ could add little
+value is {\tt loop}.  Already this function looks more like its iteration
+counterparts in imperative languages than anything else found in Lisp.  If
+the primary value of \cgol\ is to provide an imperative-like interface to
+Lisp, what's left for it to do? (The original \cgol\ predated this
+elaborate {\tt loop} construction of \ml\ and then \cl .)
+
+Another rationale for a top-level non-Lisp language that
+is translated into Lisp is that the top-level language might
+disguise differences in the underlying dialect.  The RLISP and
+PSL (``Portable Standard Lisp'') dialects were used for such
+a purpose in making a portable substrate for the REDUCE computer
+algebra system (ref: Martin Griss)  Similar
+arguments could be made for the GLISP  work by (ref: Gordon Novak).
+
+In such a system one would localize the \cgol\ translator for one's
+particular implementation of Lisp and then be able to translate
+arbitrary other \cgol\ programs with no further grunt work
+needed.  Sadly, this could not have been an important rationale for
+\cgol\ since it was not widely ported to dialects other than \ml\ and
+the very-similar Franz Lisp, and \cgol\ programs tend to leak too
+directly into the underlying semantics to cover much.
+
+\subsection {Efficiency}
+
+\cgol\ is faced with a design decision to either provide a one-to-one
+correspondence with Lisp or abstract a range of similar Lisp functions (for
+example, \code{if} and \code{cond}, or iterators) and try to translate back
+into the most efficient form.  With iterators, \cgol\ produces lousy code.
+It simply fills in the relevant parts of a \code{do}, when it could use
+\code{dotimes} or \code{dolist}.  At other times, it does much better.  For
+instance, nested \code{if}'s are collected together into a single
+\code{cond}.  Regardless of specific examples where \cgol\ is able to
+achive an efficient form,\footnote{Of course, who knows what \code{dolist}
+and \code{dotimes} expand into---probably \code{do}!  The point is that the
+more information the compiler receives, the better chance it  has
+ of optimizing the code.} the observation is that this  always takes
+custom, special-purpose, error-prone code to support.  And if the user
+knows the more efficient form at the outset, he can't specify this (without
+sidestepping \cgol\ althogether by using its escape into Lisp).
+
+\subsection {Comparison with LALR}
+
+Since \cgol's (top-down) operator precedence algorithm is trivial to
+implement and so lightweight, why are most compilers today written with a
+LALR parser generator (such as YACC or Bison)?
+
+For one, LALR is more powerful.  As the \cgol\ manual states:
+
+\begin{quotation}
+For those accustomed to BNF, the grammar of CGOL might look like: 
+
+{\footnotesize\begin{verbatim}
+  <expression> ::= if <expression> then <expression> [else <expression>]
+  <expression> ::= <expression>=<expression>
+  <expression> ::= (<expression>)
+  <expression> ::= <expression>;<expression>
+\end{verbatim}}
+\end{quotation}
+
+Everything is reduced to an expression!  This is not helpful in constructing
+parse trees (actually AST trees) for later stages of the compiler.
+
+An LALR parser can correctly distinguish identical prefixes of a
+parse string, whereas \cgol\ must make its decision upon first sighting a
+particular token in the token stream.
+
+For another reason, LALR accomodates a more regular specification of legal parse
+strings.  \cgol\ widely separates its definitions in sometimes complicated
+list building functions.  There is no crossreferencing of these functions,
+so a function can be multiply defined.  With a LALR grammar generator, much
+error checking can be done at grammar compile time, in locating multiply-defined
+functions, and finding shift-reduce and reduce-reduce errors.  Since \cgol\
+must make its decision at each token, it ``isn't sophisticated enough to
+have shift-reduce and reduce-reduce errors'', as the most recently defined
+function for that token is the one called.
+
+
+%
+% ANNOTATED CODE STARTS HERE
+%
+
+\section {Selected Annotated \cl\ \cgol\ Code}
+
+\cgol\ takes full advantage of Lisp's fluidity between code and data to
+manipulate the token stream to obtain a valid Lisp expression,  which it
+hands off to Lisp to do the evaluation.  Thus, \cgol\ is basically less
+than the front end of a compiler, as it does the lexical analysis and a
+simple parsing The parsing
+results in an ``intermediate form'' that is
+a Lisp version of the program. The Lisp system then evaluates that
+program.
+
+The code below intermixes program code with explanation thereof, in the
+style of Norvig \cite{norvig:para}.
+
+This section only presents some of the most interesting or complicated
+code.  Of course, the entirety of \cgol\ is  commented  in the source files.
+
+\subsection {Preliminaries}
+
+\subsubsection{r-e-p loop}
+
+Below is the main read-eval-print loop.
+
+{\footnotesize\begin{verbatim}
+(defun toplevel-parse (standard-input
+  (format t "~%cgol(1)> ")
+  (let ((expr 'do-at-least-once) (show-syntax t))
+    (setq cgolerr nil)
+    (setq parser-debug nil)
+    (setq scripting nil)
+    (do ((ctr 2 (+ ctr 1)) (bozo (advance) (advance))) ((not expr) 'ok)
+      (setq expr (parse -1))
+      (cond ((eq expr 'eval) (setq syntax-needed (not syntax-needed)))
+	    ((eq expr 'show) (setq show-syntax (not show-syntax)))
+	    ((eq expr 'parser_debug) (setq parser-debug (not parser-debug)))
+	    ((eq expr 'scripting) (setq scripting (not scripting)))
+	    ((eq expr 'quit) (setq expr nil))
+	    (t (if show-syntax (format t "~%  Lisp> ~a " expr))
+	       (if syntax-needed (format t "~%  Value> ~a" (eval expr)))))
+      (format t "~%cgol(~d)> " ctr)
+      )))
+\end{verbatim}}
+
+The user invokes this function (possibly through its abbreviation,
+\code{(cg)}) with evaluation mode on, show Lisp translation mode on, and
+the two parsing modes, which show the individual tokens as they are read
+in, off.  The \code{do} accepts an expression, parses it, and then examines
+the output to decide if it is an internal command or it should evaluate it.
+
+\subsubsection{Convenience Functions}
+
+\ml\ has a more direct way of attaching properties, especially the function
+property of a symbol.  \cl\ has a more verbose \code{setf-get} construction,
+but I defined macros to achieve the same conciseness of expression.  
+These macros could not be replaced by function calls here, because we do
+not want the function parameters to be evaluated.
+
+{\footnotesize\begin{verbatim}
+(defmacro defnud (fn-name fn-lambda)
+  `(setf (get ,fn-name 'nud) ,fn-lambda))
+(defmacro defled (fn-name fn-lambda)
+  `(setf (get ,fn-name 'led) ,fn-lambda))
+\end{verbatim}}
+
+
+\subsection {Lexical Analysis}
+
+The lexical analyzer is that part of a compiler\footnote{And \cgol\ is a
+compiler, not from a high level language to machine, but from one high
+level language to another, Lisp.} that accepts the program input (usually a
+stream of characters) and produces tokens for a later stage.
+
+I almost completely rewrote \cgol's tokenizer (\code{cgtok.l}), letting the
+\cl\ tokenizer handle all that it could, including floating point numbers.
+\code{cgtok.l} was a hand-written tokenizer which modified the read table
+so that every character was redirected to it.  I tried to keep the \cl\ read
+table as much as possible, only accepting \cgol-specific constructions.
+
+The core of the tokenizer is comprised of the following functions.
+
+\coderef{*cgol-readtable*}
+{\footnotesize\begin{verbatim}
+(defvar *cgol-readtable* (copy-readtable))
+
+(let ((*readtable* *cgol-readtable*))
+  ; unchanged are: string, numbers, whitespace 
+  (set-macro-character #\% #'read-comment nil)
+  (set-macro-character #\! #'(lambda (s c) (lisp-read s)) nil)
+  (set-syntax-from-char #\? #\\)	; escape character is '?'
+  ; semicolon is now statement terminator--
+  ; changed by initialize-multi-character-token-table
+  )
+
+(defun initialize-multi-character-token-table (string)
+  (setq ctoken-table string)
+  (every #'(lambda (c)
+     (set-macro-character c #'smash-token nil *cgol-readtable*))
+     string))
+
+(defun cread (&optional (stream *standard-input*))
+  (let ((*readtable* *cgol-readtable*))
+    (read stream)))
+\end{verbatim}}
+
+Here, we make a new read table by copying the standard Lisp read table.
+Some tokens are redefined right away: those for comments (\%), escapes into
+lisp (!), and character escapes (?---same as Lisp's $\backslash$).  The
+lisp function \code{initialize-multi-character-token-table} is called from user
+level to define certain characters as operators. These characters will then
+dispatch to the function \code{smash-token} which deals with collecting all
+the pieces of multicharacter-tokens.  Through great hackery lamented
+elsewhere, it correctly parses the $\geq$ in \code{1>=3}, and \code{1>+3}.
+With this support structure, the call to obtain the next \cgol\ token
+(\code{cgoltoken}\coderef{cgoltoken} ) reduces to simply a call to
+\code{cread}!
+
+I deleted the {\tt cons} cell conservation functions, because 
+{\tt cons} appeared not used wildly
+(certainly not by the built-in functions); the code generates only
+a small amount of garbage, and modern generational garbage collectors 
+are alleged to use only
+takes a small percentage of system time anyway.
+
+The dreadful means of accumulating multiple character tokens is shown below.
+
+{\footnotesize\begin{verbatim}
+(defun smash-token (stream c)
+  (intern (coerce
+	   (cfollow-tail c stream
+             (subseq ctoken-table
+               (1+ (position c ctoken-table))))
+	   'string)))
+
+(defun cfollow-tail (c stream table)
+  ;; this way of recognizing tokens is taken from the original cgol,
+  ;; is fast and easy and passes all tokens which are subtokens
+  ;; of explicitly defined tokens.
+  ;; [but it will pass erroneous multi-character tokens.  --tap]
+  (let* ((c2 (char-upcase (peek-char nil stream)))
+	 (posn (position c2 table)))
+    (cons c
+	  (if posn
+	      (progn (read-char stream)
+		     (cfollow-tail c2 stream
+                        (subseq table (1+ posn))))))))
+
+(initialize-multi-character-token-table "$|-+#&;)(*,'/:<=>@[\\]^`{|}~")
+\end{verbatim}}
+
+Upon receiving a token from the reader, \code{smash-token} searches for a
+suitable followup in the stream supplied by \code{initialize}.  {\it We can
+match a character with any token that follows.} Not only ugly, it
+can return erronous tokens!  What would be better is a list of tokens, each
+self contained.  However, it would still take a bit of character pasting to
+determine that \code{1<+2} should yield four tokens \code{ 1 < + 2}, while
+\code{1<=2} should return a compound $\leq$ for three tokens \code{1 <= 2}.
+In his baby Macsyma implementation, Norvig \cite{norvig:para} circumvents
+this problem by insisting that tokens be separated by white space.
+A finite state machine solution, such as that supplied by \code{lex}, would
+be useful here.
+
+
+\subsection {Operator Precedence}
+
+The following functions form the heart of \cgol's operator precedence structure.
+\code{parse} was considered earlier.
+
+\coderef{advance}
+\coderef{nud}
+{\footnotesize\begin{verbatim}
+(defun advance nil
+  (setq stringnud nil)
+  (setq token (cgoltoken))
+  (if (stringp token)
+      (setq stringnud #'ret-tok token (intern (string-upcase token))))
+  (if parser_debug (format t "=~a= " token))	; let's see the tokens
+  (if scripting (format t "~a " token))
+  token)
+
+
+(defun nud nil 
+  (or (verify (or stringnud
+		  (cond ((numberp token) (list 'lambda nil token)) (t (getden nudl)))))
+      (nuderr)))
+
+
+(defun getden (indl)
+   (and indl
+	(or (and (symbolp token) (get token indl))
+	    (getden indl))))
+
+\end{verbatim}}
+\coderef{getden}
+
+\code{advance} is called by parse to obtain the next token.  It also
+establishes certain flags (and handles the parsing debugging output).
+Strings can have special significance (functions identify the function name
+and other delimiters this way), and so they set a special flag; the
+interned symbol version of the string is then stored in \code{token}.
+For uniformity with operators, which are evaluated 
+by \code{parse}, everything
+is returned to \code{parse} is a function. The case of strings and
+numbers amounts to a closure which returns that value when applied.  If the
+token is a symbol, \code{genden} is called to obtain its functional
+definition.  As a single symbol may have a different function for both nud
+and led (i.e., for whether it takes a preceding expression as an argument
+or not; for example, logical not is a nud, but arithmetic plus is a led),
+the type of function desired is passed to \code{getden}.
+
+
+\subsection {Translation Library}
+
+\subsubsection{define}
+
+Because of its great size \code{define} has been given its
+own page, which may be detached to aid in following along with the
+following below.
+\code{define} is so large because it handles a great variety of function
+definitions.  The basic form of a \code{define} is this:
+
+{\footnotesize\begin{verbatim}
+define <pattern> [,bp [,bp]]; body
+\end{verbatim}}
+
+Some examples are:
+
+{\footnotesize\begin{verbatim}
+define "F"(x,y), 14; x**2 + y**2 $
+define "LOG" a "BASE" b; ...$
+\end{verbatim}}
+
+\noindent where \code{F} defines a function with a left binding power of 14 that takes two
+argument and returns the sum of their squares.  The second function
+defined is \code{log} which takes two arguments.  \code{F} is called by
+F(3+2, a), for example.  \code{log} also must be called in exactly the form
+it was defined but it now contains a delimiter between the two arguments,
+thus \code{log 8 base 2} is legal whereas \code{log(8,2)} is not.
+
+Before considering the code, note that an operator is defined by a triple:
+(1) its syntactic form, (2) its function (body), and (3) its rank in the
+precedence hierarchy.
+
+\addtocounter{page}{1}
+
+
+Now considering the code, found on the next page, the first \code{cond}
+determines whether the function is a nud or a led: if is a nud if the first
+token is the function name (a string) or it is a single character followed
+immediately by its parameters (indicated by left parenthesis); otherwise it
+is a led.
+
+Before coming to the parameter list, we may have delimiter-separated
+tokens; delimiters are checked for and formal parameters are collected in the
+list \code{argts}.
+Next we gobble up the parameter list, a comma-separated list of token
+between parentheses.
+
+Binding powers are optional, and nud's don't even have left binding powers.
+Next the function (which will be constructed later) is attached to the
+main \cgol\ parse engine by defining its nud or led property, whichever is
+appropriate, to (when invoked) parse the token stream to obtain the
+arguments (and check for the delimiters) and then to call the actual
+function.
+
+A body may or may not be supplied, as this may be an actual function
+definition or only a declaration for one of a mutually recursive pair.
+If there is a body, it is parsed recursively, using the other definitions
+in the translation library, and it is defined in a \code{defun} form.
+
+\code{define} is a case where the implementation is so complex that the
+power of LALR is sorely missed.
+
+
+
+\subsubsection{loop}
+
+Basically, Lisp's \code{loop} is already Algol-like; it certaintly isn't
+Lisp-like.  Rather than come up with a stylized version, we should just
+provide a transparent interface.  But this already exists!
+
+
+\section {Implementation Notes, Usage and Examples}
+
+\subsection {Implementation Notes}
+
+As the paper demo (in appendix~\ref{demo}) amply demonstrates, \cgol\ now
+lives in \cl.  However, due to this evolution and natural selection some
+pieces of the original implementation have not survived.  In particular,
+\code{array}\coderef{array}, \code{let}, and the {\sc i/o} functions have
+changed enormously from \ml\ to \cl.  The old use of arrays was not part of
+the translation proper, but rather a reference to \cgol's version of
+arrays.  To translate arrays properly, one would probably want to support
+all of the optional parameters and features of \cl.  This would involved
+complicated code to support it and associated documentation to describe the
+relation between the \cgol\ and \cl\ versions.  But, as mentioned under
+limitations above, if we are going to mimic all of the features of \cl, why
+not dial direct by using the escape into Lisp?
+
+In the old style, \code{new} declared the local variables.  Under \ml,
+these were special variables and the \cgol\ programs used this fact.  With
+\cl, however, these variables are lexically scoped, whereas
+\code{let}\coderef{let} is connected to a weird lambda form.  Depending on
+one's tastes, \code{let} could be remapped to the familiar \code{let} of
+\cl.
+
+Finally, the {\sc i/o}\coderef{i/o} have been completely redone in \cl.  \ml\ used
+\code{UREAD}, \code{UWRITE}, \code{FILE} and others.
+
+If one were to enhance this version in
+the direction of  robustness
+(say, in preparation for wide distribution)
+we suggest the following
+the \cgol\ changes.
+
+\begin{itemize}
+\item The method of operator lexical analysis of the original implementation was
+maintained in the \cl\ version.\footnote{In fact, this is basically the only
+part of the parser code which wasn't completely rewritten.}  This begs for
+a \code{lex}-like, finite-state-machine-based analyzer.  (Refer back to the
+annotated code for a full lament of this code.)
+(ed. note: Couldn't this be done in a Lisp-like manner through
+read-table hackery? RJF)
+
+\item As mentioned in limitations above, \cgol\ code itself must be
+rewritten.  Perhaps the most interesting example of \cgol\ code is
+\code{CGOLPRINT}, which translates {\it from} Lisp  {\it to} \cgol.  This
+entails massaging the \cgol\ code to fit comfortably in \cl, and a more
+thorough reworking to have that code recognize and translate \cl\ instead
+of \ml.  The most extensive reworking that an average \cgol\ file needs is
+a reorientation from special variables to lexical scoping, with the
+necessary parameters passed explicitly, rather than through dynamic
+scope.  The other outstanding feature of \cgol\ code is a metacircular
+interpreter for \cgol\ itself.  One must already have a \cgol\
+implementation for the metacircular to work (it does not bootstrap from
+scratch), but given the seemingly mandatory nature of metacircular interpreters
+for Scheme or subsets of Lisp in {\it any} Lisp text with a practical
+dimension, a \cgol\ metacircular interpreter appears {\it de riguer}.
+\end{itemize}
+
+
+\subsection{Usage}
+
+Obtain copies of the \cl\ files
+files \code{parser.cl} and \code{cgol.cl}. Load
+them into Lisp in that order.
+Then type \code{(cg)}.  Upon initial entry, the translator is set to both
+(1) show the Lisp translation of the \cgol\ expression and (2) evaluate it.
+This is usually what one wants, but viewing
+the translated expression can be toggled on and
+off by typing \code{show \$}.  If one is experimenting with \cgol\ and does
+not wish to worry about variables or functions being undefined, type
+\code{eval \$} to toggle evaluation  off or on.  When preparing a
+paper demo, this author found that \code{script} only reported text printed
+to the screen, not text read from the file; he created the option
+\code{scripting \$} to echo the tokens back to the screen as they are read
+from a file.  \code{parser\_debug \$} does much the same, except the tokens
+are made to stand out to the eye by enclosing each in a pair of equals
+signs.
+
+Appendix~\ref{demo} contains a paper demo of the \cgol\ translator in action.
+Remember that every command must end with a dollar sign.  \code{quit \$\$}
+exits back to Lisp.
+
+\subsection{Examples}
+
+Refer to the paper demo for more elementary examples.  Here we first consider a
+led (``left denotation'') taken from the manual, along with its
+translation into (Common) Lisp.\footnote{The output has been slightly
+reformatted from that produced by the translator.}
+
+{\footnotesize\begin{verbatim}
+define a "bozo" b, 14, 13;
+if a then car a ^ (cdr a @ b) else b $
+
+(PROGN 
+ (DEFLED 'BOZO #'(LAMBDA (LEFT) ('BOZO (PROG1 LEFT) (PROG1 (PARSE '13)))))
+ (DEFLBP 'BOZO 14)
+ (DEFUN BOZO (A B) (COND (A (CONS (CAR A) (APPEND (CDR A) B))) (T B)))) 
+\end{verbatim}}
+229z
+First notice that the translator locates the function name by searching for
+a string; non-strings are regarded as parameters, hence the function
+definition of \code{bozo}, with parameters \code{a} and \code{b}.  The body
+of the function is translated into its Lisp equivalent and forms the body
+of the Lisp function.  The numbers 14 and 13 define the left binding power
+and right binding power, respectively.  The left binding power is saved as
+a property by the \code{deflbp} line.  The right binding power is called
+into play when the function is seen by the \cgol\ translator.  When the
+translator encounters the symbol \code{bozo} it extracts its \code{led}
+property and calls the function with the left argument; the function then
+calls parse with its right binding power to obtain its left argument.
+
+
+{\footnotesize\begin{verbatim}
+define "log" a "base" b ; a+b$
+
+(PROGN
+  (DEFNUD 'LOG #'(LAMBDA NIL
+    ((PROG1 'LOG) (PROG1 (PARSE '25)) (CHECK 'BASE)
+     (PROG1 (PARSE '25))))) NIL
+  (DEFLBP 'BASE 0) (DEFUN LOG (A B) (+ A B))) 
+\end{verbatim}}
+
+Here we have simplified the body of the function and omitted binding powers
+(which are given default values), in order to concentrate on the pattern
+matching.  As above, the (first) string determines the function name and
+one can see from the Lisp translation that the first argument is
+accumulated as before by a call to \code{parse}.  Now, however, we must
+match the pattern extended by \code{base} and then parse the second and
+final argument.
+
+
+The following example is drawn from the paper demo, which in turn was taken
+from \cite{suss:sicp}.
+
+{\footnotesize	\begin{verbatim}
+define "FIB" (N) ;
+if (n=0) then 0 else if (n=1) then 1 else fib(n-1)+fib(n-2) $
+
+(DEFUN FIB (N)
+  (COND ((= N 0) 0)
+        ((= N 1) 1)
+        (T (+ (FIB (- N 1)) (FIB (- N 2)))))) 
+
+define "fib_i" (n) ;
+fib_i_aux(1,0,n) $
+define "fib_i_aux" (a,b,cnt) ;
+if (cnt=0) then b
+else fib_i_aux(a+b,a,cnt-1) $
+
+cgol(29)> FIB ( 20 ) $ 
+  Lisp> (FIB 20) 
+  Value> 6765
+
+cgol(40)> fib_i(20)$ 
+  Value> 6765
+\end{verbatim}}
+
+Here we have defined two versions of a function which determines the
+$n^{th}$ Fibonacci number, the first recursively and the second iteratively
+(using recursion for its looping construct).  The recursive (first) version
+demonstrates how \code{if}'s nest nicely:  instead of multiple
+\code{if-else} pairs, \cgol\  constructs a single \code{cond}.  The iterative
+version shows how to declare and use multiple parameters.  Note that a
+function is \code{define}d with its name as a string (i.e., with quotes) but
+it is used as a symbol (without quotes).  Of course, both functions return
+the same answer for the same parameters, although the doubly-recursive
+Fibonacci function is the only one to take noticeable calculation time (on a
+Sparc 1+) of any function in the test suite.
+
+And of course functions compose.
+
+{\footnotesize	\begin{verbatim}
+cgol(9)> fib_i(7) $
+  Lisp> (FIB_I 7) 
+  Value> 13
+
+cgol(10)> fib_i(13) $
+  Lisp> (FIB_I 13) 
+  Value> 233
+
+cgol(11)> fib_i(fib_i(7))$
+  Lisp> (FIB_I (FIB_I 7)) 
+  Value> 233
+\end{verbatim}}
+
+%MatMul, Eratosthenes, maybe ``uFX/R'' from manual
+%purpose (1) to show what sort of massaging needed by \cgol\ programs themselves
+%(2) to show that, as advertised, my \cgol\ translation works, and on the more
+%complex parts.  chosen to
+%show new operator definition, new function definition, array definition and use, even bit
+%manipulation
+
+Again, refer to the paper demo for a wider range of examples.  
+
+
+
+
+\newpage
+\appendix
+
+%\section {Operator Translations}
+%show \cgol\ expression, and {\it \cl\} translation
+%this replaces cgol.man's table, as now the translations are to \cl.
+% no time
+
+\section {Demo Script}\label{demo}
+
+
+
+\newpage
+\addtocounter{page}{5}
+\nocite{*}
+\bibliographystyle{alpha}
+\bibliography{cgol}
+
+\end{document}
+
+{\footnotesize\begin{verbatim}
+\end{verbatim}}
+

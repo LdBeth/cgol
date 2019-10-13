@@ -1,0 +1,56 @@
+From phelps@palm.CS.Berkeley.EDU Fri Dec 18 12:55:35 1992
+To: fateman@cs.Berkeley.EDU
+Subject: CGOL notes
+Status: R
+
+In the rush to finish up the paper I forgot to include two important notes
+about the CGOL conversion.  First, when I rewrote the r-e-p loop I took out
+the error handling catch-throw construct, so now an error falls back into
+Lisp; it is a simple matter to put this back in.  Second, looking through
+the source file you will see a couple areas in all uppercase, which stand
+out from the sea of lowercase; these are for let and arrays, which have
+changed enormously and for which one needs to decide whether it would be
+better to construct some artificial interface to the numerous optional
+arguments (as in making arrays) or better to have the user escape directly
+into Lisp (with the ! mechanism).
+
+-Tom
+
+From fateman@peoplesparc.Berkeley.EDU Fri Dec 18 14:47:18 1992
+To: phelps@palm.cs.berkeley.edu
+Subject: Re:  CGOL notes
+Cc: fateman@peoplesparc.Berkeley.EDU
+Status: R
+
+if you want to incorporate your notes into your original tex file -- and
+it would be nice to make it into one file (no includes) -- it would help
+make re-distribution easier.  I understand the variations on arrays, but
+why is "let" a problem?  (I haven't looked at your code..)
+RJF
+
+
+From phelps@palm.cs.berkeley.edu Fri Dec 18 15:14:09 1992
+To: fateman@peoplesparc.Berkeley.EDU
+In-Reply-To: Richard Fateman's message of Fri, 18 Dec 92 14:50:50 PST <9212182250.AA05181@peoplesparc.Berkeley.EDU>
+Subject:  CGOL notes
+Status: R
+
+The next two e-mail messages have (1) the paper as a complete unit and (2)
+the accompanying bibliography (.bib) file.
+
+The problem with let is that, currently, it's used for a weird lambda form.
+What's used as local variables aren't really local at all, with the dynamic
+scoping making them visible everywhere during their extent.  I think there
+should be a new command that looks like this:
+
+local a:=5**2, b, partial_sum:=0, list_so_far:=[];
+
+which is a CGOL-copacetic version of Common Lisp's let.  But right now I am
+tired of working with CGOL (the project took much more time than I
+anticipated; it wouldn't be too much of an exaggeration to estimate 100
+hours, including the writeup).  As I mention in the paper, you could go
+arbitrarily far in constructing new syntaxes for all the new features of
+Common Lisp.
+
+-Tom
+

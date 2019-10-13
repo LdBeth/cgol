@@ -1,0 +1,131 @@
+;;Execute by typing "cl < demo.txt".
+
+(load "parser.cl")
+(load "cgol.cl")
+
+#.(cgol)
+scripting $
+
+% C-style comments %
+% first some easy ones %
+1+1 $
+2*3/6 $
+% assignment %
+a:= 7 $
+b:= a*7 $
+
+% try out operator precedence %
+2*3/6 $
+100+3*5 $
+100*3+5 $
+% should be 47 % 2+2+6*7+7/7 $ 
+% floats use same arithmentic operators %
+2+95.3/7.25 $
+
+% can return value of arbitrary element in sequence %
+
+2+2 ; 3+3 ; 4+4 $
+2+2 & 3+3 ; 4+4 $
+2+2 ; 3+3 & 4+4 $
+
+eval $ % turn off evaluation to avoid undef'ed variables %
+% if's compose nicely %
+if (a<b) then
+if (a<c) then a
+else if (b<c) then b
+else c $
+
+% try some Lisp operators %
+[12,4,3,5,6] $
+a^b @c$
+\a,b,c; p;q;r $
+% escape into Lisp directly %
+!(make-array '(100 2) :element-type 'integer) $
+eval $
+4 isin [12,4,3,5,6] $
+
+
+% define some functions %
+
+define "FIB" (N) ;
+if (n=0) then 0 else if (n=1) then 1 else fib(n-1)+fib(n-2) $
+
+define "fact" (n) ;
+if (n=1) then 1
+else n*fact(n-1) $
+
+% now try them out %
+
+fact(1) $
+fact(5) $
+fact(20) $
+fib(2) $
+fib(10) $
+fib(20) $
+
+% how about the iterative versions
+
+  (we can't name them fib-i because
+  "-" is an arithmetic operator)
+%
+
+define "fib_i" (n) ;
+fib_i_aux(1,0,n) $
+define "fib_i_aux" (a,b,cnt) ;
+if (cnt=0) then b
+else fib_i_aux(a+b,a,cnt-1) $
+
+define "fact_i" (n) ;
+fact_i_aux(1,1,n) $
+define "fact_i_aux" (product, cntr, max) ;
+if (cntr > max) then product
+else fact_i_aux(product*cntr, cntr+1, max) $
+
+% do we get the same answers as before? %
+
+show $ % don't show Lisp translations %
+fact_i(1) $
+fact_i(5) $
+fact_i(20) $
+fib_i(2) $
+fib_i(10) $
+fib_i(20) $
+show $
+eval $
+
+% functions with patterns %
+
+define "cglog" a "base" b ; a+b $
+define a "@" b ; if a then car a^ (cdr a @ b) else b $
+
+
+
+% operations on bit-vectors
+  (these have been renamed from :A: :^: :x: :v:)
+%
+
+bitnot a $
+a bitand b $
+a bitshift 6 bitxor 700001 bitor 8 $
+eval$
+3 bitxor 3 $
+3 bitand 3 $
+16384 bitor 8192 bitor 4096 bitor 2048 bitor 1024 $
+31 bitshift 10 $
+% correct associativity for and and or %
+% (8 and 4) or 2 % 8 bitand 4 bitor 2 $
+% 8 or (4 and 2) % 8 bitor 4 bitand 2 $
+
+% other features %
+
+% for debugging the token stream %
+scripting $ parser_debug $ eval $
+define a "@" b ; if a then car a ^ (cdr a @ b) else b $
+eval $ parser_debug $ scripting $
+
+
+% back to Lisp -- double dollar %
+quit $ $
+;; back to Lisp
+
+
