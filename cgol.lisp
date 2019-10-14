@@ -133,9 +133,12 @@
 
 ;; extract the function on the nud property
 
-(defun nud nil 
-  (or (verify (or stringnud
-		  (cond ((numberp token) (list 'lambda nil token)) (t (getden nudl)))))
+(defun nud ()
+  (or (verify
+       (or stringnud
+           (cond ((numberp token)
+                  `(lambda () ,token))
+                 (t (getden nudl)))))
       (nuderr)))
 (defnud 'nud #'nud)
 
@@ -796,7 +799,7 @@
 	(t (prog (x) 
 		 (return (prog1	(setq x (list aa))
 				(do nil 
-				    ((lessp b (setq aa (plus aa c)))) 
+				    ((< b (setq aa (+ aa c)))) 
 				 (setq x (cdr (rplacd x (list aa)))))))))))
 
 (defled 'lotsof

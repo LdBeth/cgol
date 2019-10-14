@@ -6,3 +6,6 @@
 
 (defmacro putprop (var prop val)
   `(setf (get ,var ,prop) ,val)) 
+
+(defun concat (&rest n)
+  (apply 'concatenate 'string n))
